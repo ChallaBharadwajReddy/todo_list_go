@@ -8,6 +8,8 @@ import (
 )
 
 func main() {
+	database.InitRedis()
+
 	database.ConnectDatabase()
 
 	router := gin.Default()

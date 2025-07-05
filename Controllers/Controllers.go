@@ -1,15 +1,24 @@
 package controllers
 
 import (
-	"fmt"
+	"encoding/json"
 	database "gin/Database"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 func Get_todo(c *gin.Context) {
-	fmt.Println("DB pointer in controller:", database.Db)
+
+	cacheKey := "todos_list"
+
+	val, err := database.RedisClient.Get(database.Ctx, cacheKey).Result()
+	if err == nil {
+		c.Data(http.StatusOK, "application/json", []byte(val))
+		return
+	}
+
 	rows, err := database.Db.Query("SELECT id, todo FROM todos")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -27,6 +36,12 @@ func Get_todo(c *gin.Context) {
 		todos = append(todos, todo)
 	}
 
+	jsonData, err := json.Marshal(todos)
+	if err == nil {
+		database.RedisClient.Set(database.Ctx, cacheKey, jsonData, 0)
+	}
+	database.RedisClient.Set(database.Ctx, cacheKey, jsonData, time.Minute*5)
+
 	c.JSON(http.StatusOK, todos)
 }
 
@@ -42,6 +57,8 @@ func Add_todo(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert todo"})
 		return
 	}
+
+	database.RedisClient.Del(database.Ctx, "todos_list")
 
 	c.JSON(http.StatusOK, "Success")
 }
@@ -65,6 +82,8 @@ func Edit_todo(c *gin.Context) {
 		return
 	}
 
+	database.RedisClient.Del(database.Ctx, "todos_list")
+
 	c.JSON(http.StatusOK, "Success")
 
 }
@@ -83,6 +102,8 @@ func Delete_todo(c *gin.Context) {
 		c.JSON(http.StatusOK, "TODO NOT FOUND")
 		return
 	}
+
+	database.RedisClient.Del(database.Ctx, "todos_list")
 
 	c.JSON(http.StatusOK, "Success")
 }
