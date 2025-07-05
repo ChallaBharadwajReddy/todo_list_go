@@ -2,11 +2,14 @@ package main
 
 import (
 	controllers "gin/Controllers"
+	database "gin/Database"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	database.ConnectDatabase()
+
 	router := gin.Default()
 
 	router.GET("/get_list", controllers.Get_todo)
@@ -19,5 +22,5 @@ func main() {
 
 	router.DELETE("/delete/:id", controllers.Delete_todo)
 
-	router.Run() // listen and serve on 0.0.0.0:8080
+	router.Run(":8080") // listen and serve on 0.0.0.0:8080
 }

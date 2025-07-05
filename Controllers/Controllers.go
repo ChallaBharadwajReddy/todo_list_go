@@ -1,58 +1,90 @@
 package controllers
 
 import (
+	"fmt"
+	database "gin/Database"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type Todo struct {
-	Id   string `json:"id"`
-	Todo string `json:"todo"`
-}
-
-var todo_list = []Todo{}
-
 func Get_todo(c *gin.Context) {
-	c.JSON(http.StatusOK, todo_list)
+	fmt.Println("DB pointer in controller:", database.Db)
+	rows, err := database.Db.Query("SELECT id, todo FROM todos")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var todos []database.Todo
+	for rows.Next() {
+		var todo database.Todo
+		if err := rows.Scan(&todo.Id, &todo.Todo); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan row"})
+			return
+		}
+		todos = append(todos, todo)
+	}
+
+	c.JSON(http.StatusOK, todos)
 }
 
 func Add_todo(c *gin.Context) {
-	var body Todo
+	var body database.Todo
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
+		return
+	}
 
-	c.Bind(&body)
-
-	todo_list = append(todo_list, body)
+	_, err := database.Db.Exec("INSERT INTO todos (id, todo) VALUES ($1, $2)", body.Id, body.Todo)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert todo"})
+		return
+	}
 
 	c.JSON(http.StatusOK, "Success")
 }
 
 func Edit_todo(c *gin.Context) {
-	var body Todo
-
-	c.Bind(&body)
-
-	for i := range todo_list {
-		if todo_list[i].Id == body.Id {
-			todo_list[i].Todo = body.Todo
-			c.JSON(http.StatusOK, "Success")
-			return
-		}
+	var body database.Todo
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
+		return
 	}
-	c.JSON(http.StatusOK, "TODO NOT FOUND")
+
+	res, err := database.Db.Exec("UPDATE todos SET todo=$1 WHERE id=$2", body.Todo, body.Id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
+		return
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusOK, "TODO NOT FOUND")
+		return
+	}
+
+	c.JSON(http.StatusOK, "Success")
+
 }
 
 func Delete_todo(c *gin.Context) {
-	var id string = c.Param("id")
+	id := c.Param("id")
 
-	for i := range todo_list {
-		if todo_list[i].Id == id {
-			todo_list = append(todo_list[:i], todo_list[i+1:]...)
-			c.JSON(http.StatusOK, "Success")
-			return
-		}
+	res, err := database.Db.Exec("DELETE FROM todos WHERE id=$1", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Delete failed"})
+		return
 	}
-	c.JSON(http.StatusOK, "TODO NOT FOUND")
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusOK, "TODO NOT FOUND")
+		return
+	}
+
+	c.JSON(http.StatusOK, "Success")
 }
 
 func Pong(c *gin.Context) {
