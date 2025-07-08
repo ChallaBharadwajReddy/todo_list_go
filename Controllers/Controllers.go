@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	database "gin/Database"
 	"net/http"
 	"time"
@@ -19,21 +20,10 @@ func Get_todo(c *gin.Context) {
 		return
 	}
 
-	rows, err := database.Db.Query("SELECT id, todo FROM todos")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	defer rows.Close()
+	todos, err := database.Get_list()
 
-	var todos []database.Todo
-	for rows.Next() {
-		var todo database.Todo
-		if err := rows.Scan(&todo.Id, &todo.Todo); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan row"})
-			return
-		}
-		todos = append(todos, todo)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to fetch todos"})
 	}
 
 	jsonData, err := json.Marshal(todos)
@@ -52,9 +42,11 @@ func Add_todo(c *gin.Context) {
 		return
 	}
 
-	_, err := database.Db.Exec("INSERT INTO todos (id, todo) VALUES ($1, $2)", body.Id, body.Todo)
+	body.Id = fmt.Sprintf("%d", time.Now().UnixNano())
+
+	err := database.Insert_todo(body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert todo"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to insert todo"})
 		return
 	}
 
@@ -70,13 +62,12 @@ func Edit_todo(c *gin.Context) {
 		return
 	}
 
-	res, err := database.Db.Exec("UPDATE todos SET todo=$1 WHERE id=$2", body.Todo, body.Id)
+	rowsAffected, err := database.Edit_todo(body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
 		return
 	}
 
-	rowsAffected, _ := res.RowsAffected()
 	if rowsAffected == 0 {
 		c.JSON(http.StatusOK, "TODO NOT FOUND")
 		return
@@ -91,13 +82,12 @@ func Edit_todo(c *gin.Context) {
 func Delete_todo(c *gin.Context) {
 	id := c.Param("id")
 
-	res, err := database.Db.Exec("DELETE FROM todos WHERE id=$1", id)
+	rowsAffected, err := database.Delete_todo(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Delete failed"})
 		return
 	}
 
-	rowsAffected, _ := res.RowsAffected()
 	if rowsAffected == 0 {
 		c.JSON(http.StatusOK, "TODO NOT FOUND")
 		return
