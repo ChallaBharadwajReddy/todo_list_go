@@ -1,0 +1,49 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: todo_app
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: challabharadwajreddy
+      POSTGRES_DB: todo_list
+      REDIS_ADDR: redis:6379
+    networks:
+      - backend
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: todo_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: challabharadwajreddy
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: todo_list
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - backend
+
+  redis:
+    image: redis:alpine
+    container_name: todo_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+
+volumes:
+  pgdata:
+
+networks:
+  backend:

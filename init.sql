@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS todos (
+    id TEXT PRIMARY KEY,
+    todo TEXT NOT NULL,
+    deleted BOOLEAN DEFAULT FALSE
+);

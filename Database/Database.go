@@ -28,7 +28,7 @@ func ConnectDatabase() {
 	// pass := os.Getenv("PASSWORD")
 
 	// set up postgres sql to open it.
-	psqlSetup := "host=localhost port=5432 user=challabharadwajreddy dbname=todo_list sslmode=disable"
+	psqlSetup := "host=postgres port=5432 user=challabharadwajreddy dbname=todo_list sslmode=disable password=secret"
 	db, errSql := sql.Open("postgres", psqlSetup)
 	if errSql != nil {
 		fmt.Println("There is an error while connecting to the database ", err)
