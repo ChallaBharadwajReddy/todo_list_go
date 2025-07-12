@@ -24,5 +24,5 @@ func main() {
 
 	router.DELETE("/todo/:id", controllers.Delete_todo)
 
-	router.Run(":8081")
+	router.Run("0.0.0.0:8081")
 }
