@@ -23,7 +23,7 @@ func Get_todo(c *gin.Context) {
 	todos, err := database.Get_list()
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to fetch todos"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	}
 
 	jsonData, err := json.Marshal(todos)
@@ -45,8 +45,10 @@ func Add_todo(c *gin.Context) {
 	body.Id = fmt.Sprintf("%d", time.Now().UnixNano())
 
 	err := database.Insert_todo(body)
+
+	fmt.Print(err)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to insert todo"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
 
@@ -56,15 +58,18 @@ func Add_todo(c *gin.Context) {
 }
 
 func Edit_todo(c *gin.Context) {
+	fmt.Print("HI ....")
 	var body database.Todo
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
 		return
 	}
 
+	fmt.Print(body.Todo)
+
 	rowsAffected, err := database.Edit_todo(body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
 
@@ -84,7 +89,7 @@ func Delete_todo(c *gin.Context) {
 
 	rowsAffected, err := database.Delete_todo(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Delete failed"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
 
